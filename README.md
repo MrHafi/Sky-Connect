@@ -1,12 +1,11 @@
-Cloud Bridge
-
+Sky Connect
 Connect Claude to your WordPress plugins via MCP.
 Read and safely edit plugin files from Claude Web or Warp — locked inside your plugins folder.
 
 
 What it does
 
-Cloud Bridge turns your WordPress site into an MCP server. Claude can then:
+Sky Connect turns your WordPress site into an MCP server. Claude can then:
 
 
 List your plugins
