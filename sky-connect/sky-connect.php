@@ -16,6 +16,7 @@ define( 'SKY_CONNECT_FILE', __FILE__ );                       // this file
 define( 'SKY_CONNECT_DIR', plugin_dir_path( __FILE__ ) );     // our plugin folder path
 define( 'SKY_CONNECT_URL', plugin_dir_url( __FILE__ ) );      // our plugin folder url
 define( 'SKY_CONNECT_JAIL', WP_PLUGIN_DIR );                  // the ONLY folder Claude can touch
+define( 'SKY_CONNECT_VERSION', '1.0.0' );                     //Version  
 
 /* ------------------------------ register activation + deactivation hooks (load file only when needed) ---------*/
 register_activation_hook( SKY_CONNECT_FILE, function () {
@@ -34,6 +35,14 @@ final class Sky_Connect {
     /* ------------------------------ start the plugin ---------*/
     public function run() {
 
+
+    /* ------------------------------ load + start the admin page ---------*/
+        if ( is_admin() ) {
+            require_once SKY_CONNECT_DIR . 'admin/admin-page.php';
+            $admin = new Sky_Connect_Admin();
+            $admin->init();
+        }
+        
         /* ------------------------------ load + start the REST endpoint ---------*/
         require_once SKY_CONNECT_DIR . 'includes/rest_endpoint.php';
         $rest = new Sky_Connect_Rest();

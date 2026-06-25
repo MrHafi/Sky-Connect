@@ -44,17 +44,39 @@ class Sky_Connect_Rest {
             );
         }
 
-        // read the JSON-RPC message
+        // read the JSON-RPC message Claude/Warp sends (method + id for now, params later)
         $body   = $request->get_json_params();
-        $method = isset( $body['method'] ) ? $body['method'] : '';
+        $method = isset( $body['method'] ) ? $body['method'] : ''; // what the sender wants to do (like "tools/list"). If missing, use empty ''.
         $id     = isset( $body['id'] ) ? $body['id'] : null;
+
+// when Claude says hello (first handshake — must reply or Claude rejects connection)
+if ( $method === 'initialize' ) {
+    return new WP_REST_Response(
+        array(
+            'jsonrpc' => '2.0',
+            'id'      => $id,
+            'result'  => array(
+                'protocolVersion' => '2024-11-05',
+                'serverInfo'      => array(
+                    'name'    => 'Sky Connect',
+                    'version' => SKY_CONNECT_VERSION,
+                ),
+                'capabilities' => array(
+                    'tools' => array(),
+                ),
+            ),
+        ),
+        200
+    );
+}
+
 
         // when Claude asks for the tools menu
         if ( $method === 'tools/list' ) {
             return $this->tools_list( $id );
         }
 
-        // anything else for now: simple empty reply
+        // ASKED FOR OTHER TASK
         return new WP_REST_Response(
             array(
                 'jsonrpc' => '2.0',
