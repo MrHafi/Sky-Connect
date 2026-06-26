@@ -14,6 +14,8 @@ class Sky_Connect_Deactivator {
         // flip master switch OFF (stop all access immediately)
         update_option( 'sky_connect_enabled', 0 );
 
-        // we keep saved data and logs (do not delete on deactivate)
+
+        /* ------------------------------ clean up rewrite rules on deactivate ---------*/
+flush_rewrite_rules();
     }
 }

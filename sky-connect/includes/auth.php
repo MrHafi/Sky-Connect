@@ -50,6 +50,13 @@ class Sky_Connect_Auth {
             );
         }
 
+        /* ------------------------------ block everything if master switch is OFF ---------*/
+if ( ! get_option( 'sky_connect_enabled', 0 ) ) {
+    return new WP_REST_Response(
+        array( 'error' => 'Sky Connect is disabled' ),
+        403
+    );
+}
         /* ------------------------------ token is valid — allow request to continue ---------*/
         return true;
     }

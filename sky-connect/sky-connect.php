@@ -42,11 +42,16 @@ final class Sky_Connect {
             $admin = new Sky_Connect_Admin();
             $admin->init();
         }
-        
+
         /* ------------------------------ load + start the REST endpoint ---------*/
         require_once SKY_CONNECT_DIR . 'includes/rest_endpoint.php';
         $rest = new Sky_Connect_Rest();
         $rest->init();
+
+        /* ------------------------------ load + start oauth metadata ---------*/
+        require_once SKY_CONNECT_DIR . 'includes/oauth-metadata.php';
+        $metadata = new Sky_Connect_OAuth_Metadata();
+        $metadata->init();
 
     }
 
