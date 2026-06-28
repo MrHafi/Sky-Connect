@@ -53,6 +53,17 @@ final class Sky_Connect {
         $metadata = new Sky_Connect_OAuth_Metadata();
         $metadata->init();
 
+
+        /* ------------------------------ load + start oauth authorize ---------*/
+        require_once SKY_CONNECT_DIR . 'includes/oauth-authorize.php';
+        $authorize = new Sky_Connect_OAuth_Authorize();
+        $authorize->init();
+
+
+        /* ------------------------------ load + start oauth token endpoint ---------*/
+        require_once SKY_CONNECT_DIR . 'includes/oauth-token.php';
+        $token = new Sky_Connect_OAuth_Token();
+        $token->init();
     }
 
 

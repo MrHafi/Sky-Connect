@@ -15,17 +15,22 @@ class Sky_Connect_Auth {
 
     /* ------------------------------ check bearer token from request header ---------*/
     public static function check( $request ) {
+error_log( 'SKY CONNECT AUTH HIT - auth header: ' . $request->get_header( 'authorization' ) );
+error_log( 'SKY CONNECT AUTH - stored oauth hash: ' . get_option( 'sky_connect_oauth_token_hash' ) );
 
         /* ------------------------------ grab the authorization header ---------*/
         $auth_header = $request->get_header( 'authorization' );
 
         // no header sent — block
-        if ( empty( $auth_header ) ) {
-            return new WP_REST_Response(
-                array( 'error' => 'Missing authorization header' ),
-                401
-            );
-        }
+        // no header sent — return 401 with resource metadata pointer
+if ( empty( $auth_header ) ) {
+    $response = new WP_REST_Response(
+        array( 'error' => 'Missing authorization header' ),
+        401
+    );
+    $response->header( 'WWW-Authenticate', 'Bearer resource_metadata="' . home_url( '/.well-known/oauth-protected-resource' ) . '"' );
+    return $response;
+}
 
         /* ------------------------------ extract plain token from "Bearer <token>" ---------*/
         $plain_token = trim( str_replace( 'Bearer ', '', $auth_header ) );
@@ -38,12 +43,20 @@ class Sky_Connect_Auth {
             );
         }
 
-        /* ------------------------------ hash received token and compare with stored hash ---------*/
-        $received_hash = wp_hash( $plain_token );
-        $stored_hash   = get_option( 'sky_connect_token_hash' );
+       /* ------------------------------ check against warp token first ---------*/
+        $warp_hash  = get_option( 'sky_connect_token_hash' );
+        $oauth_hash = get_option( 'sky_connect_oauth_token_hash' ); //web claude
 
-        // no match — block
-        if ( ! hash_equals( $stored_hash, $received_hash ) ) {
+        $warp_valid  = hash_equals( $warp_hash, wp_hash( $plain_token ) );
+        $oauth_valid = ! empty( $oauth_hash ) && hash_equals( $oauth_hash, wp_hash( $plain_token ) );
+
+
+        error_log( 'SKY CONNECT AUTH - plain_token: ' . $plain_token );
+error_log( 'SKY CONNECT AUTH - warp_valid: ' . ( $warp_valid ? 'YES' : 'NO' ) );
+error_log( 'SKY CONNECT AUTH - oauth_valid: ' . ( $oauth_valid ? 'YES' : 'NO' ) );
+
+        // neither matched — block
+        if ( ! $warp_valid && ! $oauth_valid ) {
             return new WP_REST_Response(
                 array( 'error' => 'Invalid token' ),
                 401

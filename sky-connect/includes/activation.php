@@ -32,29 +32,24 @@ class Sky_Connect_Activator
 
 
 
-
-        /* ------------------------------ generate and store client ID and secret on first activate ---------*/
-        if (! get_option('sky_connect_client_id')) {
-
-            // client ID is public — store as plain
-            $client_id = 'sky-connect-' . parse_url(home_url(), PHP_URL_HOST); //client id : sky-connect-devbuggs.com
-
-            // client secret is private — store hashed, show once
-            $client_secret = bin2hex(random_bytes(32));
-
-            update_option('sky_connect_client_id', $client_id);
-            update_option('sky_connect_client_secret_plain', $client_secret);
-            update_option('sky_connect_client_secret_hash', wp_hash($client_secret));
-        }
-
-
-
         /* ------------------------------ add rewrite rule for well-known oauth URL ---------*/
         add_rewrite_rule(
             '\.well-known/oauth-authorization-server$',
             'index.php?rest_route=/sky-connect/v1/.well-known/oauth-authorization-server',
             'top'
         );
+
+        add_rewrite_rule(
+    '\.well-known/oauth-protected-resource$',
+    'index.php?rest_route=/sky-connect/v1/.well-known/oauth-protected-resource',
+    'top'
+);
+
+add_rewrite_rule(
+    '\.well-known/oauth-protected-resource/wp-json/sky-connect/v1/mcp$',
+    'index.php?rest_route=/sky-connect/v1/.well-known/oauth-protected-resource',
+    'top'
+);
         flush_rewrite_rules();
     }
 }
