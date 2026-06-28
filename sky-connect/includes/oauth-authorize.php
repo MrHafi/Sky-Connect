@@ -53,6 +53,7 @@ class Sky_Connect_OAuth_Authorize {
         $state          = sanitize_text_field( $_POST['state'] );
         $code_challenge = sanitize_text_field( $_POST['code_challenge'] );
         $client_id      = sanitize_text_field( $_POST['client_id'] );
+        $resource = esc_url_raw( $_POST['resource'] );
 
         /* ------------------------------ if admin clicked deny ---------*/
         if ( $decision !== 'allow' ) {
@@ -73,6 +74,7 @@ class Sky_Connect_OAuth_Authorize {
                 'code_challenge' => $code_challenge,
                 'redirect_uri'   => $redirect_uri,
                 'client_id'      => $client_id,
+                'resource'       => $resource,
             ),
             5 * MINUTE_IN_SECONDS
         );
@@ -86,37 +88,18 @@ class Sky_Connect_OAuth_Authorize {
     }
 
     /* ------------------------------ fetch and verify CIMD client document ---------*/
-    private function verify_client_id( $client_id ) {
+   /* ------------------------------ verify client_id is a registered DCR client ---------*/
+private function verify_client_id( $client_id ) {
 
-        // client_id must be a valid HTTPS URL
-        if ( strpos( $client_id, 'https://' ) !== 0 ) {
-            return false;
-        }
+    $clients = get_option( 'sky_connect_dcr_clients', array() );
 
-        // fetch the client metadata document
-        $response = wp_remote_get( $client_id, array( 'timeout' => 5 ) );
-
-        if ( is_wp_error( $response ) ) {
-            error_log( 'SKY CONNECT CIMD - fetch failed: ' . $response->get_error_message() );
-            return false;
-        }
-
-        $body = json_decode( wp_remote_retrieve_body( $response ), true );
-
-        if ( empty( $body ) ) {
-            error_log( 'SKY CONNECT CIMD - empty or invalid JSON' );
-            return false;
-        }
-
-        // document must be self-referential — its client_id must match the URL we fetched
-        if ( ! isset( $body['client_id'] ) || $body['client_id'] !== $client_id ) {
-            error_log( 'SKY CONNECT CIMD - client_id mismatch in document' );
-            return false;
-        }
-
-        error_log( 'SKY CONNECT CIMD - verified OK: ' . $client_id );
-        return true;
+    // client must exist in our registered list
+    if ( ! isset( $clients[ $client_id ] ) ) {
+        return false;
     }
+
+    return true;
+}
 
     /* ------------------------------ render allow/deny screen ---------*/
     public function render_screen() {
@@ -130,6 +113,7 @@ class Sky_Connect_OAuth_Authorize {
         $redirect_uri   = esc_url_raw( $_GET['redirect_uri'] ?? '' );
         $code_challenge = sanitize_text_field( $_GET['code_challenge'] ?? '' );
         $state          = sanitize_text_field( $_GET['state'] ?? '' );
+        $resource = esc_url_raw( $_GET['resource'] ?? '' );
 
         /* ------------------------------ verify required params present ---------*/
         if ( empty( $client_id ) || empty( $redirect_uri ) || empty( $code_challenge ) ) {
@@ -155,6 +139,7 @@ class Sky_Connect_OAuth_Authorize {
                     <input type="hidden" name="code_challenge"       value="<?php echo esc_attr( $code_challenge ); ?>">
                     <input type="hidden" name="state"                value="<?php echo esc_attr( $state ); ?>">
                     <input type="hidden" name="sky_connect_decision" value="">
+                    <input type="hidden" name="resource" value="<?php echo esc_attr( $resource ); ?>">
                     <button type="submit" onclick="this.form.sky_connect_decision.value='allow'" class="button button-primary" style="margin-right:10px;">
                         Allow
                     </button>

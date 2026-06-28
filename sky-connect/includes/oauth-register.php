@@ -1,11 +1,11 @@
 <?php
 /*
  * This file:
- * - Registers a Dynamic Client Registration (DCR) endpoint
- * - Claude Web hits this automatically before starting OAuth flow
- * - Accepts Claude's registration request (client_name, redirect_uris)
- * - Returns our static Client ID back to Claude
- * - Stores redirect URI Claude sends for later verification
+ * - Registers the DCR (Dynamic Client Registration) endpoint
+ * - Claude POSTs here first to register itself
+ * - Claude sends its name + redirect_uris
+ * - We create a fresh client_id, store it with the redirect_uris
+ * - We send the client_id back to Claude
  * - No auth needed — this is a public registration endpoint
  */
 
@@ -21,7 +21,7 @@ class Sky_Connect_OAuth_Register {
         add_action( 'rest_api_init', array( $this, 'register_route' ) );
     }
 
-    /* ------------------------------ register DCR endpoint route ---------*/
+    /* ------------------------------ register the DCR endpoint route ---------*/
     public function register_route() {
         register_rest_route(
             'sky-connect/v1',
@@ -37,34 +37,42 @@ class Sky_Connect_OAuth_Register {
     /* ------------------------------ handle Claude's registration request ---------*/
     public function handle_registration( $request ) {
 
-        /* ------------------------------ grab what Claude sends ---------*/
-        $body          = $request->get_json_params();
+        $body = $request->get_json_params();
+
+        /* ------------------------------ grab redirect URIs Claude sends ---------*/
         $redirect_uris = isset( $body['redirect_uris'] ) ? $body['redirect_uris'] : array();
         $client_name   = isset( $body['client_name'] ) ? sanitize_text_field( $body['client_name'] ) : 'Claude';
 
-        error_log( 'SKY CONNECT DCR - registration request from: ' . $client_name );
-        error_log( 'SKY CONNECT DCR - redirect_uris: ' . print_r( $redirect_uris, true ) );
-
-        /* ------------------------------ validate redirect_uri is present ---------*/
-        if ( empty( $redirect_uris ) ) {
+        /* ------------------------------ redirect URIs are required ---------*/
+        if ( empty( $redirect_uris ) || ! is_array( $redirect_uris ) ) {
             return new WP_REST_Response(
                 array( 'error' => 'invalid_redirect_uri' ),
                 400
             );
         }
 
-        /* ------------------------------ store redirect URIs Claude sent ---------*/
-        update_option( 'sky_connect_registered_redirect_uris', $redirect_uris );
+        /* ------------------------------ create a fresh client_id ---------*/
+        $client_id = 'sky-client-' . bin2hex( random_bytes( 16 ) );
 
-        /* ------------------------------ return our static client ID back to Claude ---------*/
+        /* ------------------------------ store this client's details ---------*/
+        $clients = get_option( 'sky_connect_dcr_clients', array() );
+        $clients[ $client_id ] = array(
+            'client_name'   => $client_name,
+            'redirect_uris' => array_map( 'esc_url_raw', $redirect_uris ),
+            'created'       => time(),
+        );
+        update_option( 'sky_connect_dcr_clients', $clients );
+
+
+        /* ------------------------------ return client_id to Claude (DCR response) ---------*/
         return new WP_REST_Response(
             array(
-                'client_id'              => get_option( 'sky_connect_client_id' ),
-                'client_secret'          => get_option( 'sky_connect_client_secret_plain', '' ),
-                'redirect_uris'          => $redirect_uris,
-                'grant_types'            => array( 'authorization_code' ),
-                'response_types'         => array( 'code' ),
-                'token_endpoint_auth_method' => 'client_secret_post',
+                'client_id'                  => $client_id,
+                'redirect_uris'              => $redirect_uris,
+                'client_name'                => $client_name,
+                'grant_types'                => array( 'authorization_code' ),
+                'response_types'             => array( 'code' ),
+                'token_endpoint_auth_method' => 'none',
             ),
             201
         );

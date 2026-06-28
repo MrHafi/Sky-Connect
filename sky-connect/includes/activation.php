@@ -50,6 +50,13 @@ add_rewrite_rule(
     'index.php?rest_route=/sky-connect/v1/.well-known/oauth-protected-resource',
     'top'
 );
+
+add_rewrite_rule(
+    '\.well-known/oauth-authorization-server(.*)$',
+    'index.php?rest_route=/sky-connect/v1/.well-known/oauth-authorization-server',
+    'top'
+);
+
         flush_rewrite_rules();
     }
 }

@@ -15,8 +15,6 @@ class Sky_Connect_Auth {
 
     /* ------------------------------ check bearer token from request header ---------*/
     public static function check( $request ) {
-error_log( 'SKY CONNECT AUTH HIT - auth header: ' . $request->get_header( 'authorization' ) );
-error_log( 'SKY CONNECT AUTH - stored oauth hash: ' . get_option( 'sky_connect_oauth_token_hash' ) );
 
         /* ------------------------------ grab the authorization header ---------*/
         $auth_header = $request->get_header( 'authorization' );
@@ -28,7 +26,8 @@ if ( empty( $auth_header ) ) {
         array( 'error' => 'Missing authorization header' ),
         401
     );
-    $response->header( 'WWW-Authenticate', 'Bearer resource_metadata="' . home_url( '/.well-known/oauth-protected-resource' ) . '"' );
+    // $response->header( 'WWW-Authenticate', 'Bearer resource_metadata="' . home_url( '/.well-known/oauth-protected-resource' ) . '"' );
+    $response->header( 'WWW-Authenticate', 'Bearer resource_metadata="' . home_url( '/.well-known/oauth-protected-resource/wp-json/sky-connect/v1/mcp' ) . '"' );
     return $response;
 }
 
@@ -51,9 +50,6 @@ if ( empty( $auth_header ) ) {
         $oauth_valid = ! empty( $oauth_hash ) && hash_equals( $oauth_hash, wp_hash( $plain_token ) );
 
 
-        error_log( 'SKY CONNECT AUTH - plain_token: ' . $plain_token );
-error_log( 'SKY CONNECT AUTH - warp_valid: ' . ( $warp_valid ? 'YES' : 'NO' ) );
-error_log( 'SKY CONNECT AUTH - oauth_valid: ' . ( $oauth_valid ? 'YES' : 'NO' ) );
 
         // neither matched — block
         if ( ! $warp_valid && ! $oauth_valid ) {

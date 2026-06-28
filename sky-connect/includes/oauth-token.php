@@ -40,7 +40,6 @@ class Sky_Connect_OAuth_Token {
     /* ------------------------------ handle token exchange request from Claude ---------*/
     public function handle_token_request( $request ) {
 
-        error_log( '--- SKY CONNECT TOKEN START ---' );
 
         /* ------------------------------ grab parameters ---------*/
         $client_id     = sanitize_text_field( $request->get_param( 'client_id' ) );
@@ -49,69 +48,54 @@ class Sky_Connect_OAuth_Token {
         $redirect_uri  = esc_url_raw( $request->get_param( 'redirect_uri' ) );
         $grant_type    = sanitize_text_field( $request->get_param( 'grant_type' ) );
 
-        error_log( 'SKY CONNECT - grant_type: ' . $grant_type );
-        error_log( 'SKY CONNECT - client_id: ' . $client_id );
-        error_log( 'SKY CONNECT - auth_code: ' . $auth_code );
+
 
         /* ------------------------------ verify grant type ---------*/
         if ( $grant_type !== 'authorization_code' ) {
-            error_log( 'SKY CONNECT - FAILED: wrong grant_type' );
             return new WP_REST_Response(
                 array( 'error' => 'unsupported_grant_type' ),
                 400
             );
         }
-        error_log( 'SKY CONNECT - grant_type OK' );
 
         /* ------------------------------ verify auth code exists and not expired ---------*/
         $stored = get_transient( 'sky_connect_auth_code_' . $auth_code );
-        error_log( 'SKY CONNECT - auth code lookup: ' . print_r( $stored, true ) );
 
         if ( ! $stored ) {
-            error_log( 'SKY CONNECT - FAILED: auth code not found or expired' );
             return new WP_REST_Response(
                 array( 'error' => 'invalid_grant' ),
                 400
             );
         }
-        error_log( 'SKY CONNECT - auth code OK' );
 
         /* ------------------------------ verify client_id matches what was stored ---------*/
         if ( $client_id !== $stored['client_id'] ) {
-            error_log( 'SKY CONNECT - FAILED: client_id mismatch' );
             return new WP_REST_Response(
                 array( 'error' => 'invalid_grant' ),
                 400
             );
         }
-        error_log( 'SKY CONNECT - client_id OK' );
 
         /* ------------------------------ verify redirect_uri matches ---------*/
         if ( $redirect_uri !== $stored['redirect_uri'] ) {
-            error_log( 'SKY CONNECT - FAILED: redirect_uri mismatch' );
             return new WP_REST_Response(
                 array( 'error' => 'invalid_grant' ),
                 400
             );
         }
-        error_log( 'SKY CONNECT - redirect_uri OK' );
 
         /* ------------------------------ verify PKCE ---------*/
         $expected_challenge = rtrim(
             strtr( base64_encode( hash( 'sha256', $code_verifier, true ) ), '+/', '-_' ),
             '='
         );
-        error_log( 'SKY CONNECT - PKCE expected: ' . $expected_challenge );
-        error_log( 'SKY CONNECT - PKCE stored: ' . $stored['code_challenge'] );
 
         if ( ! hash_equals( $stored['code_challenge'], $expected_challenge ) ) {
-            error_log( 'SKY CONNECT - FAILED: PKCE mismatch' );
             return new WP_REST_Response(
                 array( 'error' => 'invalid_grant' ),
                 400
             );
         }
-        error_log( 'SKY CONNECT - PKCE OK' );
 
         /* ------------------------------ delete auth code — one time use only ---------*/
         delete_transient( 'sky_connect_auth_code_' . $auth_code );
@@ -119,10 +103,8 @@ class Sky_Connect_OAuth_Token {
         /* ------------------------------ generate long lived access token ---------*/
         $access_token = bin2hex( random_bytes( 32 ) );
         update_option( 'sky_connect_oauth_token_hash', wp_hash( $access_token ) );
-        error_log( 'SKY CONNECT - token generated and stored' );
-
         /* ------------------------------ return token to Claude ---------*/
-        error_log( '--- SKY CONNECT TOKEN SUCCESS ---' );
+   
         return new WP_REST_Response(
             array(
                 'access_token' => $access_token,

@@ -64,6 +64,13 @@ final class Sky_Connect {
         require_once SKY_CONNECT_DIR . 'includes/oauth-token.php';
         $token = new Sky_Connect_OAuth_Token();
         $token->init();
+
+        /* ------------------------------ load + start oauth register (DCR) ---------*/
+        require_once SKY_CONNECT_DIR . 'includes/oauth-register.php';
+        $register = new Sky_Connect_OAuth_Register();
+        $register->init();
+
+
     }
 
 

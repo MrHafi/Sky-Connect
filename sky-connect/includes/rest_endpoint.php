@@ -44,39 +44,68 @@ class Sky_Connect_Rest {
             );
         }
 
-        // read the JSON-RPC message Claude/Warp sends (method + id for now, params later)
+        /* ------------------------------ run token check before anything else ---------*/
+        require_once SKY_CONNECT_DIR . 'includes/auth.php';
+        $auth = Sky_Connect_Auth::check( $request );
+
+        // if auth did not return true — send back the error (e.g. 401 with WWW-Authenticate)
+        if ( $auth !== true ) {
+            return $auth;
+        }
+// if auth did not return true — send back the error (e.g. 401 with WWW-Authenticate)
+        if ( $auth !== true ) {
+            return $auth;
+        }
+
+
+        // read the JSON-RPC message Claude/Warp sends
         $body   = $request->get_json_params();
-        $method = isset( $body['method'] ) ? $body['method'] : ''; // what the sender wants to do (like "tools/list"). If missing, use empty ''.
+
+
+        $method = isset( $body['method'] ) ? $body['method'] : '';
+
+
+        // read the JSON-RPC message Claude/Warp sends
+       $body   = $request->get_json_params();
+$method = isset( $body['method'] ) ? $body['method'] : '';
         $id     = isset( $body['id'] ) ? $body['id'] : null;
 
-// when Claude says hello (first handshake — must reply or Claude rejects connection)
-if ( $method === 'initialize' ) {
-    return new WP_REST_Response(
-        array(
-            'jsonrpc' => '2.0',
-            'id'      => $id,
-            'result'  => array(
-                'protocolVersion' => '2024-11-05',
-                'serverInfo'      => array(
-                    'name'    => 'Sky Connect',
-                    'version' => SKY_CONNECT_VERSION,
-                ),
-                'capabilities' => array(
-                    'tools' => array(),
-                ),
-            ),
-        ),
-        200
-    );
-}
+        /* ------------------------------ notifications have no id — accept with 202, no body ---------*/
+        if ( $id === null && strpos( $method, 'notifications/' ) === 0 ) {
+            return new WP_REST_Response( null, 202 );
+        }
 
+        /* ------------------------------ initialize handshake — must return Mcp-Session-Id header ---------*/
+        if ( $method === 'initialize' ) {
+    $session_id = bin2hex( random_bytes( 16 ) );
 
-        // when Claude asks for the tools menu
+            $response = new WP_REST_Response(
+                array(
+                    'jsonrpc' => '2.0',
+                    'id'      => $id,
+                    'result'  => array(
+                        'protocolVersion' => '2024-11-05',
+                        'serverInfo'      => array(
+                            'name'    => 'Sky Connect',
+                            'version' => SKY_CONNECT_VERSION,
+                        ),
+                        'capabilities' => array(
+                            'tools' => array( 'listChanged' => false ),
+                        ),
+                    ),
+                ),
+                200
+            );
+            $response->header( 'Mcp-Session-Id', $session_id );
+            return $response;
+        }
+
+        /* ------------------------------ when Claude asks for the tools menu ---------*/
         if ( $method === 'tools/list' ) {
             return $this->tools_list( $id );
         }
 
-        // ASKED FOR OTHER TASK
+        /* ------------------------------ any other method — empty result ---------*/
         return new WP_REST_Response(
             array(
                 'jsonrpc' => '2.0',
