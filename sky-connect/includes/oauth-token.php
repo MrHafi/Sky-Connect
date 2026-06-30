@@ -1,15 +1,9 @@
 <?php
 /*
  * This file:
- * - Registers the token endpoint URL
- * - Claude hits this with the auth code from authorize screen
- * - No client secret needed — CIMD clients are public by definition
- * - We verify auth code is valid and not expired
- * - We verify PKCE — code_verifier must match stored code_challenge
- * - We generate a long lived access token
- * - We store token hash in DB
- * - We return plain token to Claude
- * - Auth code deleted after use — one time only
+ 1 Verify — check 4 different things (method, ticket alive, IDs match, secret matches puzzle)
+ 2 Destroy — delete the 5-min ticket so it can never be reused
+ 3 Issue — create and hand over the real, long-lasting access token
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -25,6 +19,7 @@ class Sky_Connect_OAuth_Token {
     }
 
     /* ------------------------------ register token endpoint route ---------*/
+    // Only accepts POST requests. No login required (__return_true) — Claude isn't logged in as a WP user,/
     public function register_route() {
         register_rest_route(
             'sky-connect/v1',
@@ -42,11 +37,11 @@ class Sky_Connect_OAuth_Token {
 
 
         /* ------------------------------ grab parameters ---------*/
-        $client_id     = sanitize_text_field( $request->get_param( 'client_id' ) );
-        $auth_code     = sanitize_text_field( $request->get_param( 'code' ) );
-        $code_verifier = sanitize_text_field( $request->get_param( 'code_verifier' ) );
-        $redirect_uri  = esc_url_raw( $request->get_param( 'redirect_uri' ) );
-        $grant_type    = sanitize_text_field( $request->get_param( 'grant_type' ) );
+        $client_id     = sanitize_text_field( $request->get_param( 'client_id' ) );     
+        $auth_code     = sanitize_text_field( $request->get_param( 'code' ) );          // the 5 min ticket from file 3
+        $code_verifier = sanitize_text_field( $request->get_param( 'code_verifier' ) ); // original secret, revealed now
+        $redirect_uri  = esc_url_raw( $request->get_param( 'redirect_uri' ) );          // must match earlier saved one
+        $grant_type    = sanitize_text_field( $request->get_param( 'grant_type' ) );    // confirms login method used
 
 
 

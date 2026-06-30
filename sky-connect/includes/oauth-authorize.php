@@ -1,12 +1,20 @@
 <?php
 /*
  * This file:
+ * File purpose: Shows you the Allow/Deny screen, and creates the 5-min temporary code when you click Allow.
+ * 
  * - Registers a hidden WP admin page for OAuth authorize screen
  * - Claude sends its own URL as client_id (CIMD approach)
  * - We fetch that URL and verify it is a valid Claude client
  * - Shows "Allow Claude?" screen to logged in admin
  * - On Allow — generates auth code, stores it with PKCE, redirects Claude back
  * - On Deny — redirects Claude back with error
+ * 
+ * 
+ * VAR:
+secret = code_verifier → exact same thing, just plain text
+code_challenge = the hashed version, sits in the middle
+auth_code = totally separate, just a 5-min safe bridge through the browser
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -48,10 +56,10 @@ class Sky_Connect_OAuth_Authorize {
         /* ------------------------------ verify nonce ---------*/
         check_admin_referer( 'sky_connect_oauth_authorize' );
 
-        $decision       = sanitize_text_field( $_POST['sky_connect_decision'] );
-        $redirect_uri   = esc_url_raw( $_POST['redirect_uri'] );
+        $decision       = sanitize_text_field( $_POST['sky_connect_decision'] ); // did click alloww or deny
+        $redirect_uri   = esc_url_raw( $_POST['redirect_uri'] ); //claude back
         $state          = sanitize_text_field( $_POST['state'] );
-        $code_challenge = sanitize_text_field( $_POST['code_challenge'] );
+        $code_challenge = sanitize_text_field( $_POST['code_challenge'] ); //Hashed puzzle sent by claude 
         $client_id      = sanitize_text_field( $_POST['client_id'] );
         $resource = esc_url_raw( $_POST['resource'] );
 
@@ -65,7 +73,7 @@ class Sky_Connect_OAuth_Authorize {
         }
 
         /* ------------------------------ admin clicked allow — generate auth code ---------*/
-        $auth_code = bin2hex( random_bytes( 16 ) );
+        $auth_code = bin2hex( random_bytes( 16 ) ); 
 
         // store auth code with PKCE challenge, redirect URI, and client_id
         set_transient(

@@ -1,6 +1,10 @@
 <?php
 /*
  * This file:
+ * GIVING CLAUDE 2 URLS
+ *  1) URL WITH ALL THE ENDPOINTS ARE INCLUDED FOR HIM
+ *  2) URL TO MENTION THE MAIN END POINT FOR OUR SITE WHERE HE GONNA CONNECT
+ * 
  * - Registers /.well-known/oauth-authorization-server (tells Claude where to authorize, get tokens, and register)
  * - Registers /.well-known/oauth-protected-resource (tells Claude which server the token is for)
  * - No auth needed — Claude hits these first before anything else

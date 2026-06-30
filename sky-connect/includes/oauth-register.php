@@ -1,6 +1,8 @@
 <?php
 /*
  * This file:
+ * File purpose: This file lets Claude create its own ID card automatically, without you doing anything manually.
+ * 
  * - Registers the DCR (Dynamic Client Registration) endpoint
  * - Claude POSTs here first to register itself
  * - Claude sends its name + redirect_uris
@@ -68,7 +70,7 @@ class Sky_Connect_OAuth_Register {
         return new WP_REST_Response(
             array(
                 'client_id'                  => $client_id,
-                'redirect_uris'              => $redirect_uris,
+                'redirect_uris'              => $redirect_uris, //retuern address claude gave
                 'client_name'                => $client_name,
                 'grant_types'                => array( 'authorization_code' ),
                 'response_types'             => array( 'code' ),
