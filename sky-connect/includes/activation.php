@@ -23,11 +23,7 @@ class Sky_Connect_Activator
             // generate a strong random plain token
             $plain_token = bin2hex(random_bytes(32));
 
-            // save plain token temporarily so admin page can show it once
-            update_option('sky_connect_token_plain', $plain_token);
-
-            // save hashed version for comparing later (this stays forever)
-            update_option('sky_connect_token_hash', wp_hash($plain_token));
+  
         }
 
 

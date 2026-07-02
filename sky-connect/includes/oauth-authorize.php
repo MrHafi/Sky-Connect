@@ -133,6 +133,14 @@ private function verify_client_id( $client_id ) {
             wp_die( 'Invalid client_id — could not verify client document' );
         }
 
+        /* ------------------------------ check redirect_uri matches what was registered ---------*/
+            $clients = get_option( 'sky_connect_dcr_clients', array() );
+            $allowed = $clients[ $client_id ]['redirect_uris'] ?? array();
+
+            if ( ! in_array( $redirect_uri, $allowed, true ) ) {
+                wp_die( 'Invalid redirect_uri' );
+            }
+
         ?>
         <div class="wrap">
             <h1>Sky Connect — Allow Access</h1>

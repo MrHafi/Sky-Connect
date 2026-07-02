@@ -70,6 +70,8 @@ final class Sky_Connect {
         $register = new Sky_Connect_OAuth_Register();
         $register->init();
 
+        /* ------------------------------ load the safety jail ---------*/
+        require_once SKY_CONNECT_DIR . 'includes/jail.php';
 
     }
 

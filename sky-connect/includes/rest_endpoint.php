@@ -52,22 +52,12 @@ class Sky_Connect_Rest {
         if ( $auth !== true ) {
             return $auth;
         }
-// if auth did not return true — send back the error (e.g. 401 with WWW-Authenticate)
-        if ( $auth !== true ) {
-            return $auth;
-        }
+
 
 
         // read the JSON-RPC message Claude/Warp sends
         $body   = $request->get_json_params();
-
-
         $method = isset( $body['method'] ) ? $body['method'] : '';
-
-
-        // read the JSON-RPC message Claude/Warp sends
-       $body   = $request->get_json_params();
-$method = isset( $body['method'] ) ? $body['method'] : '';
         $id     = isset( $body['id'] ) ? $body['id'] : null;
 
         /* ------------------------------ notifications have no id — accept with 202, no body ---------*/

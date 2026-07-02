@@ -45,8 +45,8 @@ if ( empty( $auth_header ) ) {
        /* ------------------------------ check against warp token first ---------*/
         $warp_hash  = get_option( 'sky_connect_token_hash' );
         $oauth_hash = get_option( 'sky_connect_oauth_token_hash' ); //web claude
-
-        $warp_valid  = hash_equals( $warp_hash, wp_hash( $plain_token ) );
+        
+        $warp_valid = ! empty( $warp_hash ) && hash_equals( $warp_hash, wp_hash( $plain_token ) );
         $oauth_valid = ! empty( $oauth_hash ) && hash_equals( $oauth_hash, wp_hash( $plain_token ) );
 
 

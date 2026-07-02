@@ -77,30 +77,8 @@ class Sky_Connect_Admin {
             wp_redirect( admin_url( 'admin.php?page=sky-connect' ) );
             exit;
         }
-
-        /* ------------------------------ handle client secret regeneration ---------*/
-        if (
-            isset( $_POST['sky_connect_regenerate_secret'] ) &&
-            check_admin_referer( 'sky_connect_regenerate_secret' )
-        ) {
-            $client_secret = bin2hex( random_bytes( 32 ) );
-            update_option( 'sky_connect_client_secret_plain', $client_secret );
-            update_option( 'sky_connect_client_secret_hash', wp_hash( $client_secret ) );
-
-            wp_redirect( admin_url( 'admin.php?page=sky-connect' ) );
-            exit;
-        }
-
-        /* ------------------------------ delete plain secret after user confirms copy ---------*/
-        if (
-            isset( $_POST['sky_connect_secret_copied'] ) &&
-            check_admin_referer( 'sky_connect_confirm_secret_copied' )
-        ) {
-            delete_option( 'sky_connect_client_secret_plain' );
-            wp_redirect( admin_url( 'admin.php?page=sky-connect' ) );
-            exit;
-        }
     }
+        
 
    /* ------------------------------ render the admin page ---------*/
 public function render_page() {
