@@ -5,7 +5,7 @@
  * - Accepts POST only, forces HTTPS
  * - Reads the JSON-RPC message Claude/Warp sends
  * - Replies with our 4 tools list (tools/list)
- * - Tool actions + auth are added in later steps
+ * - Runs tools when Claude calls them (tools/call)
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -53,12 +53,11 @@ class Sky_Connect_Rest {
             return $auth;
         }
 
-
-
         // read the JSON-RPC message Claude/Warp sends
         $body   = $request->get_json_params();
         $method = isset( $body['method'] ) ? $body['method'] : '';
         $id     = isset( $body['id'] ) ? $body['id'] : null;
+        $params = isset( $body['params'] ) ? $body['params'] : array(); // params holds the tool name + its inputs
 
         /* ------------------------------ notifications have no id — accept with 202, no body ---------*/
         if ( $id === null && strpos( $method, 'notifications/' ) === 0 ) {
@@ -67,7 +66,7 @@ class Sky_Connect_Rest {
 
         /* ------------------------------ initialize handshake — must return Mcp-Session-Id header ---------*/
         if ( $method === 'initialize' ) {
-    $session_id = bin2hex( random_bytes( 16 ) );
+            $session_id = bin2hex( random_bytes( 16 ) );
 
             $response = new WP_REST_Response(
                 array(
@@ -95,6 +94,56 @@ class Sky_Connect_Rest {
             return $this->tools_list( $id );
         }
 
+        /* ------------------------------ when Claude actually RUNS a tool ---------*/
+        if ( $method === 'tools/call' ) {
+
+            require_once SKY_CONNECT_DIR . 'includes/jail.php';
+            require_once SKY_CONNECT_DIR . 'tools/tools.php';
+
+            $tool_name = isset( $params['name'] ) ? $params['name'] : '';
+            $args      = isset( $params['arguments'] ) ? $params['arguments'] : array();
+
+            $result = null;
+
+            /* ------------------------------ pick which tool to run ---------*/
+            if ( $tool_name === 'list_plugins' ) {
+                $result = Sky_Connect_Tools::list_plugins();
+
+            } elseif ( $tool_name === 'list_files' ) {
+                $plugin = isset( $args['plugin'] ) ? $args['plugin'] : '';
+                $result = Sky_Connect_Tools::list_files( $plugin );
+
+            } elseif ( $tool_name === 'read_file' ) {
+                $path   = isset( $args['path'] ) ? $args['path'] : '';
+                $result = Sky_Connect_Tools::read_file( $path );
+
+            } elseif ( $tool_name === 'write_file' ) {
+                $path    = isset( $args['path'] ) ? $args['path'] : '';
+                $content = isset( $args['content'] ) ? $args['content'] : '';
+                $result  = Sky_Connect_Tools::write_file( $path, $content );
+
+            } else {
+                $result = array( 'error' => 'Unknown tool' );
+            }
+
+            /* ------------------------------ send the result back to Claude ---------*/
+            return new WP_REST_Response(
+                array(
+                    'jsonrpc' => '2.0',
+                    'id'      => $id,
+                    'result'  => array(
+                        'content' => array(
+                            array(
+                                'type' => 'text',
+                                'text' => is_string( $result ) ? $result : wp_json_encode( $result ),
+                            ),
+                        ),
+                    ),
+                ),
+                200
+            );
+        }
+
         /* ------------------------------ any other method — empty result ---------*/
         return new WP_REST_Response(
             array(
@@ -114,22 +163,69 @@ class Sky_Connect_Rest {
                 'id'      => $id,
                 'result'  => array(
                     'tools' => array(
+
+                        /* ------------------------------ tool 1: no input needed ---------*/
                         array(
                             'name'        => 'list_plugins',
-                            'description' => 'List plugin folders',
+                            'description' => 'List all plugin folders',
+                            'inputSchema' => array(
+                                'type'       => 'object',
+                                'properties' => (object) array(),
+                            ),
                         ),
+
+                        /* ------------------------------ tool 2: needs plugin folder name ---------*/
                         array(
                             'name'        => 'list_files',
-                            'description' => 'List files inside one plugin',
+                            'description' => 'List files inside one plugin folder',
+                            'inputSchema' => array(
+                                'type'       => 'object',
+                                'properties' => array(
+                                    'plugin' => array(
+                                        'type'        => 'string',
+                                        'description' => 'Plugin folder name',
+                                    ),
+                                ),
+                                'required'   => array( 'plugin' ),
+                            ),
                         ),
+
+                        /* ------------------------------ tool 3: needs file path ---------*/
                         array(
                             'name'        => 'read_file',
-                            'description' => 'Read a file',
+                            'description' => 'Read a file inside a plugin',
+                            'inputSchema' => array(
+                                'type'       => 'object',
+                                'properties' => array(
+                                    'path' => array(
+                                        'type'        => 'string',
+                                        'description' => 'File path relative to plugins folder',
+                                    ),
+                                ),
+                                'required'   => array( 'path' ),
+                            ),
                         ),
+
+                        /* ------------------------------ tool 4: needs path + new content ---------*/
                         array(
                             'name'        => 'write_file',
-                            'description' => 'Save a file (after checks)',
+                            'description' => 'Save a file after safety checks',
+                            'inputSchema' => array(
+                                'type'       => 'object',
+                                'properties' => array(
+                                    'path'    => array(
+                                        'type'        => 'string',
+                                        'description' => 'File path relative to plugins folder',
+                                    ),
+                                    'content' => array(
+                                        'type'        => 'string',
+                                        'description' => 'New file content',
+                                    ),
+                                ),
+                                'required'   => array( 'path', 'content' ),
+                            ),
                         ),
+
                     ),
                 ),
             ),

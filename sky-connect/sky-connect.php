@@ -73,6 +73,9 @@ final class Sky_Connect {
         /* ------------------------------ load the safety jail ---------*/
         require_once SKY_CONNECT_DIR . 'includes/jail.php';
 
+        /* ------------------------------ load the tools ---------*/
+require_once SKY_CONNECT_DIR . 'tools/tools.php';
+        
     }
 
 
