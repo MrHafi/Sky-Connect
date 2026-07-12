@@ -125,7 +125,60 @@ public function render_page() {
             </form>
         <?php endif; ?>
 
-    </div>
-    <?php
+    
+<hr>
+
+            <?php /* ------------------------------ activity log section ---------*/ ?>
+            <h2>Activity Log</h2>
+            <p>The last 50 things Claude did on this site.</p>
+
+            <?php
+            require_once SKY_CONNECT_DIR . 'includes/logger.php';
+            $logs = Sky_Connect_Logger::get_recent( 50 );
+            ?>
+
+            <?php if ( empty( $logs ) ) : ?>
+                <p>Nothing logged yet.</p>
+            <?php else : ?>
+
+                <table class="widefat striped">
+                    <thead>
+                        <tr>
+                            <th>When</th>
+                            <th>Tool</th>
+                            <th>File</th>
+                            <th>Result</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <?php foreach ( $logs as $log ) : ?>
+                        <tr>
+                            <td><?php echo esc_html( $log->created_at ); ?></td>
+                            <td><code><?php echo esc_html( $log->tool ); ?></code></td>
+                            <td><?php echo esc_html( $log->file_path ); ?></td>
+                            <td>
+                                <?php
+                                /* ------------------------------ colour the result so problems stand out ---------*/
+                                $colour = '#666';                                  // grey by default
+                                if ( $log->status === 'success' )     { $colour = 'green'; }
+                                if ( $log->status === 'blocked' )     { $colour = '#d63638'; } // red
+                                if ( $log->status === 'rolled_back' ) { $colour = '#dba617'; } // amber
+                                ?>
+                                <strong style="color:<?php echo esc_attr( $colour ); ?>">
+                                    <?php echo esc_html( $log->status ); ?>
+                                </strong>
+                            </td>
+                            <td><?php echo esc_html( $log->message ); ?></td>
+                        </tr>
+                    <?php endforeach; ?>
+                    </tbody>
+                </table>
+
+            <?php endif; 
+
+
+
+
 }
 }

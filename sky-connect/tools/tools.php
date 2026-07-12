@@ -77,6 +77,8 @@ class Sky_Connect_Tools {
             return array( 'error' => 'File not found or not allowed' );
         }
 
+        require_once SKY_CONNECT_DIR . 'includes/logger.php';
+        Sky_Connect_Logger::add( 'read_file', $path, 'success' );
         return file_get_contents( $safe );
     }
 
@@ -87,16 +89,22 @@ class Sky_Connect_Tools {
         require_once SKY_CONNECT_DIR . 'includes/backup.php';
         require_once SKY_CONNECT_DIR . 'includes/syntax.php';
         require_once SKY_CONNECT_DIR . 'includes/health.php';
+        require_once SKY_CONNECT_DIR . 'includes/logger.php'; 
+
 
         /* ------------------------------ STEP 1: jail check — must be inside plugins folder ---------*/
         $safe = Sky_Connect_Jail::safe_path( $path );
 
-        if ( $safe === false || ! is_file( $safe ) ) {
+       if ( $safe === false || ! is_file( $safe ) ) {
+            require_once SKY_CONNECT_DIR . 'includes/logger.php';
+            Sky_Connect_Logger::add( 'read_file', $path, 'blocked', 'File not found or outside jail' );
             return array( 'error' => 'File not found or not allowed' );
         }
 
         /* ------------------------------ STEP 2: never let Claude edit its own plugin ---------*/
         if ( ! Sky_Connect_Jail::is_writable_path( $safe ) ) {
+                        Sky_Connect_Logger::add( 'write_file', $path, 'blocked', 'File not found or outside jail' );
+
             return array( 'error' => 'Cannot edit the Sky Connect plugin itself' );
         }
 
@@ -105,6 +113,7 @@ class Sky_Connect_Tools {
 
         // check() returns true if valid, or the error text if broken
         if ( $syntax !== true ) {
+                        Sky_Connect_Logger::add( 'write_file', $path, 'blocked', 'Syntax error: ' . $syntax );
             return array(
                 'error'  => 'Syntax error — file not saved',
                 'detail' => $syntax,
@@ -139,11 +148,9 @@ class Sky_Connect_Tools {
         $health = Sky_Connect_Health::check();
 
         // check() returns true if healthy, or the error text if the site broke
-        if ( $health !== true ) {
-
-            // site is broken — put the old file back IMMEDIATELY
+     if ( $health !== true ) {
             Sky_Connect_Backup::restore( $safe, $path );
-
+            Sky_Connect_Logger::add( 'write_file', $path, 'rolled_back', $health );
             return array(
                 'error'  => 'Site broke after saving — old file restored',
                 'detail' => $health,
@@ -151,6 +158,7 @@ class Sky_Connect_Tools {
         }
 
         /* ------------------------------ all checks passed — the save is final ---------------------*/
+       Sky_Connect_Logger::add( 'write_file', $path, 'success', 'Saved. Backup: ' . basename( $backup ) );
         return array(
             'success' => true,
             'bytes'   => $written,

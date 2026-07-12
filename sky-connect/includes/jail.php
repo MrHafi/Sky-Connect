@@ -52,6 +52,7 @@ class Sky_Connect_Jail {
         if ( strpos( $full_path, $own_folder ) === 0 ) {
             return false;
         }
+        require_once SKY_CONNECT_DIR . 'includes/logger.php'; 
 
         return true;
     }

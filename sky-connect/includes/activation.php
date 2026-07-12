@@ -53,6 +53,12 @@ add_rewrite_rule(
     'top'
 );
 
+
         flush_rewrite_rules();
-    }
+
+/* ------------------------------ create the log table ---------*/
+        require_once SKY_CONNECT_DIR . 'includes/logger.php';
+        Sky_Connect_Logger::create_table();
+        
+        }
 }
