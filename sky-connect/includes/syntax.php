@@ -2,8 +2,7 @@
 /*
  * This file:
  * - Checks if PHP code is valid BEFORE we save it
- * - Writes the code to a temp file, runs PHP's syntax checker on it
- * - Deletes the temp file right after
+ * - Uses PHP's own tokenizer (works even when shell_exec is blocked)
  * - Returns true if the code is fine, or the error message if it is broken
  */
 
@@ -22,35 +21,26 @@ class Sky_Connect_Syntax {
             return true;
         }
 
-        // make a temporary file to test the code in (never touches the real file)
-        $temp = wp_tempnam( 'sky-connect-check' );
+        /* ------------------------------ parse the code with PHP's own tokenizer ---------*/
+        // token_get_all() reads the code the same way PHP does when it loads a file.
+        // With the TOKEN_PARSE flag it throws a ParseError on bad syntax — but it
+        // NEVER runs the code. This works on hosts where shell_exec is blocked.
+        try {
 
-        if ( ! $temp ) {
-            return 'Could not create temp file for syntax check';
+            token_get_all( $code, TOKEN_PARSE );
+
+        } catch ( ParseError $e ) {
+
+            // the code is broken — send the reason back so Claude can fix it
+            return 'Parse error: ' . $e->getMessage() . ' on line ' . $e->getLine();
+
+        } catch ( Error $e ) {
+
+            // any other compile-level problem
+            return 'Error: ' . $e->getMessage();
         }
 
-        file_put_contents( $temp, $code );
-
-        /* ------------------------------ run PHP's own syntax checker on the temp file ---------*/
-        // "php -l" means "lint" — it only checks the code, it never runs it
-        $command = 'php -l ' . escapeshellarg( $temp ) . ' 2>&1'; //  safety wrap, stops hackers injecting extra commands here.
-
-        $output = shell_exec( $command );
-
-        
-        unlink( $temp ); // clean up the temp file no matter what happened
-
-        /* ------------------------------ shell_exec may be disabled on some hosts ---------*/
-        if ( $output === null ) {
-            return 'Syntax check unavailable on this server';
-        }
-
-        /* ------------------------------ PHP says "No syntax errors detected" when the code is fine ---------*/
-        if ( strpos( $output, 'No syntax errors' ) !== false ) {
-            return true;
-        }
-
-        // otherwise the output IS the error message — send it back so Claude can fix it
-        return trim( $output );
+        /* ------------------------------ code parsed cleanly ---------*/
+        return true;
     }
 }

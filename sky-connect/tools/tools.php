@@ -121,6 +121,16 @@ class Sky_Connect_Tools {
         /* ------------------------------ STEP 5: save the new content ---------*/
         $written = file_put_contents( $safe, $content );
 
+      /* ------------------------------ make PHP forget the old compiled copy ---------*/
+        // WordPress's wp_opcache_invalidate() only exists in wp-admin, not in REST
+        // requests — so we call PHP's native function directly, guarded by a check
+        // in case the host has OPcache disabled.
+        if ( function_exists( 'opcache_invalidate' ) ) {
+            @opcache_invalidate( $safe, true );
+        }
+
+        // also clear PHP's cached file info (size, modified time)
+        clearstatcache( true, $safe );
         if ( $written === false ) {
             return array( 'error' => 'Could not write file' );
         }

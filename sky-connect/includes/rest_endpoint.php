@@ -236,6 +236,7 @@ class Sky_Connect_Rest {
                                 'properties' => (object) array(),
                             ),
                         ),
+                        
 
                     ),
                 ),
