@@ -37,4 +37,22 @@ class Sky_Connect_Jail {
         /* ------------------------------ safe — return the real path ---------*/
         return $full;
     }
+
+
+
+
+    /* ------------------------------ block CLAUDE WRITES to our own plugin SKY CONNECT ---------*/
+    public static function is_writable_path( $full_path ) {
+
+        // the folder this plugin lives in
+        $own_folder = realpath( SKY_CONNECT_DIR );
+
+        // if the file sits inside our own plugin — refuse to write
+        // (Claude could break its own connection and then be unable to fix it)
+        if ( strpos( $full_path, $own_folder ) === 0 ) {
+            return false;
+        }
+
+        return true;
+    }
 }

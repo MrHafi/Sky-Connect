@@ -122,7 +122,9 @@ class Sky_Connect_Rest {
                 $content = isset( $args['content'] ) ? $args['content'] : '';
                 $result  = Sky_Connect_Tools::write_file( $path, $content );
 
-            } else {
+            }  elseif ( $tool_name === 'read_error_log' ) {
+                $result = Sky_Connect_Tools::read_error_log();
+              }  else {
                 $result = array( 'error' => 'Unknown tool' );
             }
 
@@ -225,11 +227,23 @@ class Sky_Connect_Rest {
                                 'required'   => array( 'path', 'content' ),
                             ),
                         ),
+                        /* ------------------------------ tool 5: no input needed ---------*/
+                        array(
+                            'name'        => 'read_error_log',
+                            'description' => 'Read the last 50 lines of the WordPress error log',
+                            'inputSchema' => array(
+                                'type'       => 'object',
+                                'properties' => (object) array(),
+                            ),
+                        ),
 
                     ),
                 ),
             ),
             200
         );
+
+
+        
     }
 }

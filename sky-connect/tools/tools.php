@@ -80,23 +80,99 @@ class Sky_Connect_Tools {
         return file_get_contents( $safe );
     }
 
-    /* ------------------------------ tool 4: write a file ---------*/
+  /* ------------------------------ tool 4: write a file (with full safety net) -------------------*/
     public static function write_file( $path, $content ) {
 
-        // jail check
+        // load the safety helpers we need
+        require_once SKY_CONNECT_DIR . 'includes/backup.php';
+        require_once SKY_CONNECT_DIR . 'includes/syntax.php';
+        require_once SKY_CONNECT_DIR . 'includes/health.php';
+
+        /* ------------------------------ STEP 1: jail check — must be inside plugins folder ---------*/
         $safe = Sky_Connect_Jail::safe_path( $path );
 
         if ( $safe === false || ! is_file( $safe ) ) {
             return array( 'error' => 'File not found or not allowed' );
         }
 
-        // save the new content
+        /* ------------------------------ STEP 2: never let Claude edit its own plugin ---------*/
+        if ( ! Sky_Connect_Jail::is_writable_path( $safe ) ) {
+            return array( 'error' => 'Cannot edit the Sky Connect plugin itself' );
+        }
+
+        /* ------------------------------ STEP 3: syntax check the NEW code before saving ---------*/
+        $syntax = Sky_Connect_Syntax::check( $content, $safe ); //jail.php
+
+        // check() returns true if valid, or the error text if broken
+        if ( $syntax !== true ) {
+            return array(
+                'error'  => 'Syntax error — file not saved',
+                'detail' => $syntax,
+            );
+        }
+
+        /* ------------------------------ STEP 4: back up the old file before touching it ---------*/
+        $backup = Sky_Connect_Backup::create( $safe, $path ); //backup.php
+
+        if ( $backup === false ) {
+            return array( 'error' => 'Could not create backup — save cancelled' );
+        }
+
+        /* ------------------------------ STEP 5: save the new content ---------*/
         $written = file_put_contents( $safe, $content );
 
         if ( $written === false ) {
             return array( 'error' => 'Could not write file' );
         }
 
-        return array( 'success' => true, 'bytes' => $written );
+        /* ------------------------------ STEP 6: is the site still alive? ---------*/
+        $health = Sky_Connect_Health::check();
+
+        // check() returns true if healthy, or the error text if the site broke
+        if ( $health !== true ) {
+
+            // site is broken — put the old file back IMMEDIATELY
+            Sky_Connect_Backup::restore( $safe, $path );
+
+            return array(
+                'error'  => 'Site broke after saving — old file restored',
+                'detail' => $health,
+            );
+        }
+
+        /* ------------------------------ all checks passed — the save is final ---------------------*/
+        return array(
+            'success' => true,
+            'bytes'   => $written,
+            'backup'  => basename( $backup ),
+        );
+    }
+
+
+
+
+
+    /* ------------------------------ tool 5: read the last lines of the error log ---------*/
+    public static function read_error_log() {
+
+        // WordPress writes its errors here when WP_DEBUG_LOG is on
+        $log_file = WP_CONTENT_DIR . '/debug.log';
+
+        if ( ! is_file( $log_file ) ) {
+            return array( 'error' => 'No debug.log found — is WP_DEBUG_LOG turned on?' );
+        }
+
+        /* ------------------------------ read the file into lines ---------*/
+        $lines = file( $log_file, FILE_IGNORE_NEW_LINES );
+
+        if ( $lines === false ) {
+            return array( 'error' => 'Could not read the log file' );
+        }
+
+        /* ------------------------------ keep only the last 50 lines ---------*/
+        // logs get huge, and only the newest errors matter for fixing a bug
+        $last = array_slice( $lines, -50 );
+
+        return implode( "\n", $last );
     }
 }
