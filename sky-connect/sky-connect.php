@@ -76,6 +76,16 @@ final class Sky_Connect {
         /* ------------------------------ load the tools ---------*/
 require_once SKY_CONNECT_DIR . 'tools/tools.php';
         
+
+/* ------------------------------ schedule daily cleanup ---------*/
+        // WordPress fires 'sky_connect_daily' once a day. we hook our two cleanup
+        // jobs to it so old backups and old logs delete themselves automatically.
+        add_action( 'sky_connect_daily', function () {
+            require_once SKY_CONNECT_DIR . 'includes/backup.php';
+            require_once SKY_CONNECT_DIR . 'includes/logger.php';
+            Sky_Connect_Backup::clean_old();
+            Sky_Connect_Logger::clean_old();
+        } );
     }
 
 

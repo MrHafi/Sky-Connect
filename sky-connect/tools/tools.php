@@ -101,6 +101,13 @@ class Sky_Connect_Tools {
             return array( 'error' => 'File not found or not allowed' );
         }
 
+       /* ------------------------------ STEP 1.5: refuse to wipe a file to empty ---------*/
+        // empty PHP is technically valid and won't crash the homepage, so it would
+        // slip through every other check and silently blank a real file. block it.
+        if ( trim( $content ) === '' ) {
+            return array( 'error' => 'Refused — empty content would wipe the file' );
+        }
+
         /* ------------------------------ STEP 2: never let Claude edit its own plugin ---------*/
         if ( ! Sky_Connect_Jail::is_writable_path( $safe ) ) {
                         Sky_Connect_Logger::add( 'write_file', $path, 'blocked', 'File not found or outside jail' );

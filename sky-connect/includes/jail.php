@@ -30,7 +30,12 @@ class Sky_Connect_Jail {
         }
 
         /* ------------------------------ must start inside the base folder ---------*/
-        if ( strpos( $full, $base ) !== 0 ) { //if ful path got plugin directory in path?
+        // add a trailing slash to both sides so "plugins" can't match "plugins-backup".
+        // without this, a folder whose name just STARTS with the real one would pass.
+        $base_with_slash = rtrim( $base, '/' ) . '/';
+        $full_with_slash = $full . '/';
+
+        if ( strpos( $full_with_slash, $base_with_slash ) !== 0 ) {
             return false; // outside the jail — block
         }
 
@@ -47,12 +52,17 @@ class Sky_Connect_Jail {
         // the folder this plugin lives in
         $own_folder = realpath( SKY_CONNECT_DIR );
 
+        // add a trailing slash to both sides so "sky-connect" can't match
+        // "sky-connect-pro". without it, any folder starting with our name
+        // would be wrongly blocked from editing.
+        $own_with_slash  = rtrim( $own_folder, '/' ) . '/';
+        $full_with_slash = $full_path . '/';
+
         // if the file sits inside our own plugin — refuse to write
         // (Claude could break its own connection and then be unable to fix it)
-        if ( strpos( $full_path, $own_folder ) === 0 ) {
+        if ( strpos( $full_with_slash, $own_with_slash ) === 0 ) {
             return false;
         }
-        require_once SKY_CONNECT_DIR . 'includes/logger.php'; 
 
         return true;
     }

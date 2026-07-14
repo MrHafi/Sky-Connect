@@ -20,9 +20,19 @@ class Sky_Connect_Backup {
 
         $dir = WP_CONTENT_DIR . '/sky-connect-backups';
 
-        // make the folder the first time it is needed
+       // make the folder the first time it is needed
         if ( ! is_dir( $dir ) ) {
             wp_mkdir_p( $dir );
+        }
+
+        /* ------------------------------ block web access to backups ---------*/
+        // an empty index.php stops folder listing; the .htaccess denies direct
+        // downloads on Apache/LiteSpeed. together they keep old source code private.
+        if ( ! file_exists( $dir . '/index.php' ) ) {
+            file_put_contents( $dir . '/index.php', "<?php // silence is golden" );
+        }
+        if ( ! file_exists( $dir . '/.htaccess' ) ) {
+            file_put_contents( $dir . '/.htaccess', "Deny from all" );
         }
 
         return $dir;

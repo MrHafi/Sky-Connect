@@ -60,5 +60,11 @@ add_rewrite_rule(
         require_once SKY_CONNECT_DIR . 'includes/logger.php';
         Sky_Connect_Logger::create_table();
         
+
+        /* ------------------------------ turn on the daily cleanup schedule ---------*/
+        if ( ! wp_next_scheduled( 'sky_connect_daily' ) ) {
+            wp_schedule_event( time(), 'daily', 'sky_connect_daily' );
+        }
+        
         }
 }
