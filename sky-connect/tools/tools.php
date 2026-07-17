@@ -156,8 +156,33 @@ class Sky_Connect_Tools {
 
         // check() returns true if healthy, or the error text if the site broke
      if ( $health !== true ) {
-            Sky_Connect_Backup::restore( $safe, $path );
+
+            /* ------------------------------ try to restore, and CHECK it worked ---------*/
+            // restore() returns true on success, false if the copy failed
+            // (disk full, permissions). we must not tell Claude "safe" unless it is.
+            $restored = Sky_Connect_Backup::restore( $safe, $path );
+
+            /* ------------------------------ restore FAILED — this is an emergency ---------*/
+            if ( $restored === false ) {
+
+                // try one more time before giving up
+                $restored = Sky_Connect_Backup::restore( $safe, $path );
+            }
+
+            if ( $restored === false ) {
+
+                // both attempts failed — the broken file is STILL LIVE
+                Sky_Connect_Logger::add( 'write_file', $path, 'restore_failed', 'CRITICAL: could not restore backup — site may be broken. ' . $health );
+
+                return array(
+                    'error'  => 'URGENT — site broke AND backup restore failed. Manual fix needed.',
+                    'detail' => $health,
+                );
+            }
+
+            /* ------------------------------ restore worked — site is safe again ---------*/
             Sky_Connect_Logger::add( 'write_file', $path, 'rolled_back', $health );
+
             return array(
                 'error'  => 'Site broke after saving — old file restored',
                 'detail' => $health,

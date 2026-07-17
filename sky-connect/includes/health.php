@@ -2,10 +2,10 @@
 /*
  * This file:
  * - Checks the site still works after a file was changed
- * - Sends a POST request to the homepage (not GET)
- * - POST is NEVER cached by any cache plugin, so this always hits real PHP
- * - If the site is broken, this request will show it
- * - Returns true if healthy, or an error message if broken
+ * - Tests homepage, a real post, and the REST API root
+ * - Uses POST so no cache serves a stale "healthy" page
+ * - Logs the result of each page so one test run shows everything
+ * - If ANY page is broken, the whole site counts as broken
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
@@ -18,15 +18,45 @@ class Sky_Connect_Health {
     /* ------------------------------ check the site still loads fine ---------*/
     public static function check() {
 
-        /* ------------------------------ build a fresh homepage url ---------*/
         $bust = wp_rand();
-        $url  = home_url( '/?sky_health=' . $bust );
+        $urls = array();
 
-        /* ------------------------------ POST, not GET — this is the key ---------*/
-        // Every page cache (LiteSpeed, WP Rocket, W3TC, WP Super Cache, Cloudflare)
-        // only caches GET requests. A POST is never served from cache, so it forces
-        // WordPress to actually run PHP — which means a broken plugin really crashes here.
-        // This is an HTTP standard, so it works on every host, not just one.
+        // 1. homepage — front-end crashes
+        $urls['homepage'] = home_url( '/?sky_health=' . $bust );
+
+        // 2. a real published post — theme + most plugins
+        $recent = get_posts( array(
+            'numberposts' => 1,
+            'post_status' => 'publish',
+            'fields'      => 'ids',
+        ) );
+        if ( ! empty( $recent ) ) {
+            $urls['post'] = add_query_arg( 'sky_health', $bust, get_permalink( $recent[0] ) );
+        }
+
+        // 3. REST API root — API/plugin crashes
+        $urls['rest'] = add_query_arg( 'sky_health', $bust, rest_url() );
+
+        /* ------------------------------ test each page, log each result ---------*/
+        foreach ( $urls as $label => $url ) {
+
+            $result = self::test_one( $url );
+
+            // log every page so one run tells us the full picture
+            error_log( 'SKY HEALTH - ' . $label . ': ' . ( $result === true ? 'OK' : $result ) );
+
+            // first broken page = whole site broken
+            if ( $result !== true ) {
+                return $result;
+            }
+        }
+
+        return true;
+    }
+
+    /* ------------------------------ test a single url ---------*/
+    private static function test_one( $url ) {
+
         $response = wp_remote_post( $url, array(
             'timeout'     => 20,
             'redirection' => 0,
@@ -38,38 +68,26 @@ class Sky_Connect_Health {
             ),
         ) );
 
-        /* ------------------------------ request failed = treat as broken ---------*/
-        // if we cannot even load the homepage, something is badly wrong.
-        // roll back — better safe than sorry.
         if ( is_wp_error( $response ) ) {
-            return 'Site is broken — could not load homepage: ' . $response->get_error_message();
+            return 'could not load: ' . $response->get_error_message();
         }
 
         $code = wp_remote_retrieve_response_code( $response );
-        $body = wp_remote_retrieve_body( $response );        
+        $body = wp_remote_retrieve_body( $response );
 
-        /* ------------------------------ a 500 is a hard crash ---------*/
         if ( $code >= 500 ) {
-            return 'Site is broken — homepage returned error ' . $code;
+            return 'returned error ' . $code;
         }
 
-        /* ------------------------------ WordPress prints these when it dies ---------*/
-        // WP can still return 200 while showing the white "critical error" page
         if (
             stripos( $body, 'There has been a critical error' ) !== false ||
             stripos( $body, 'Fatal error' ) !== false ||
             stripos( $body, 'Uncaught Error' ) !== false ||
             stripos( $body, 'recovery mode' ) !== false
         ) {
-            return 'Site is broken — fatal error detected on homepage';
+            return 'fatal error detected';
         }
 
-        /* ------------------------------ a near-empty page means it died ---------*/
-        if ( strlen( trim( $body ) ) < 100 ) {
-            return 'Site is broken — homepage returned an empty page';
-        }
-
-        /* ------------------------------ site is fine ---------*/
         return true;
     }
 }

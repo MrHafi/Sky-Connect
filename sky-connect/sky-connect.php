@@ -77,6 +77,13 @@ final class Sky_Connect {
 require_once SKY_CONNECT_DIR . 'tools/tools.php';
         
 
+
+/* ------------------------------ add restore link to WP's recovery email ---------*/
+        require_once SKY_CONNECT_DIR . 'includes/recovery-email.php';
+        $recovery = new Sky_Connect_Recovery_Email();
+        $recovery->init();
+
+        
 /* ------------------------------ schedule daily cleanup ---------*/
         // WordPress fires 'sky_connect_daily' once a day. we hook our two cleanup
         // jobs to it so old backups and old logs delete themselves automatically.
@@ -86,6 +93,10 @@ require_once SKY_CONNECT_DIR . 'tools/tools.php';
             Sky_Connect_Backup::clean_old();
             Sky_Connect_Logger::clean_old();
         } );
+
+
+
+        
     }
 
 

@@ -81,52 +81,65 @@ class Sky_Connect_Admin {
         
 
    /* ------------------------------ render the admin page ---------*/
-public function render_page() {
+/* ------------------------------ render the admin page ---------*/
+    public function render_page() {
 
-    $enabled     = get_option( 'sky_connect_enabled', 0 );
-    $plain_token = get_option( 'sky_connect_token_plain', '' );
+        $enabled     = get_option( 'sky_connect_enabled', 0 );
+        $plain_token = get_option( 'sky_connect_token_plain', '' );
 
-    ?>
-    <div class="wrap">
-        <h1>Sky Connect</h1>
+        ?>
+        <div class="wrap">
+            <h1>Sky Connect</h1>
 
-        <?php /* ------------------------------ master switch section ---------*/ ?>
-        <h2>Master Switch</h2>
-        <form method="post">
-            <?php wp_nonce_field( 'sky_connect_toggle_switch' ); ?>
-            <p>Status: <strong><?php echo $enabled ? 'ON' : 'OFF'; ?></strong></p>
-            <button type="submit" name="sky_connect_toggle" class="button">
-                <?php echo $enabled ? 'Turn OFF' : 'Turn ON'; ?>
-            </button>
-        </form>
-
-        <hr>
-
-        <?php /* ------------------------------ warp bearer token section ---------*/ ?>
-        <h2>Warp Bearer Token</h2>
-
-        <?php if ( ! empty( $plain_token ) ) : ?>
-            <p><strong>Copy this token now — it will not be shown again:</strong></p>
-            <code style="font-size:14px;"><?php echo esc_html( $plain_token ); ?></code>
-            <br><br>
+            <?php /* ------------------------------ master switch section ---------*/ ?>
+            <h2>Master Switch</h2>
             <form method="post">
-                <?php wp_nonce_field( 'sky_connect_confirm_token_copied' ); ?>
-                <button type="submit" name="sky_connect_token_copied" class="button">
-                    I copied it ✓
+                <?php wp_nonce_field( 'sky_connect_toggle_switch' ); ?>
+                <p>Status: <strong><?php echo $enabled ? 'ON' : 'OFF'; ?></strong></p>
+                <button type="submit" name="sky_connect_toggle" class="button">
+                    <?php echo $enabled ? 'Turn OFF' : 'Turn ON'; ?>
                 </button>
             </form>
-        <?php else : ?>
-            <p>Token is set. Use regenerate to get a new one.</p>
-            <form method="post">
-                <?php wp_nonce_field( 'sky_connect_regenerate_token' ); ?>
-                <button type="submit" name="sky_connect_regenerate" class="button button-primary">
-                    Regenerate Token
-                </button>
-            </form>
-        <?php endif; ?>
 
-    
-<hr>
+            <hr>
+
+            <?php /* ------------------------------ warp bearer token section ---------*/ ?>
+            <h2>Warp Bearer Token</h2>
+
+            <?php if ( ! empty( $plain_token ) ) : ?>
+                <p><strong>Copy this token now — it will not be shown again:</strong></p>
+                <code style="font-size:14px;"><?php echo esc_html( $plain_token ); ?></code>
+                <br><br>
+                <form method="post">
+                    <?php wp_nonce_field( 'sky_connect_confirm_token_copied' ); ?>
+                    <button type="submit" name="sky_connect_token_copied" class="button">
+                        I copied it ✓
+                    </button>
+                </form>
+            <?php else : ?>
+                <p>Token is set. Use regenerate to get a new one.</p>
+                <form method="post">
+                    <?php wp_nonce_field( 'sky_connect_regenerate_token' ); ?>
+                    <button type="submit" name="sky_connect_regenerate" class="button button-primary">
+                        Regenerate Token
+                    </button>
+                </form>
+            <?php endif; ?>
+
+            <hr>
+
+            <?php /* ------------------------------ emergency restore section ---------*/ ?>
+            <h2>Emergency Restore</h2>
+            <p>If a bad edit ever breaks your site, open this URL in your browser to restore the newest backup. <strong>Bookmark it now.</strong></p>
+            <?php
+            $key      = get_option( 'sky_connect_emergency_key', '' );
+            $base_url = home_url( '/?sky_restore=' . $key );
+            ?>
+            <p><strong>Your emergency URL:</strong></p>
+            <code style="font-size:12px; word-break:break-all;"><?php echo esc_html( $base_url ); ?></code>
+            <p style="color:#d63638;"><small>Keep this private — anyone with this URL can restore your files.</small></p>
+
+            <hr>
 
             <?php /* ------------------------------ activity log section ---------*/ ?>
             <h2>Activity Log</h2>
@@ -159,11 +172,11 @@ public function render_page() {
                             <td><?php echo esc_html( $log->file_path ); ?></td>
                             <td>
                                 <?php
-                                /* ------------------------------ colour the result so problems stand out ---------*/
-                                $colour = '#666';                                  // grey by default
-                                if ( $log->status === 'success' )     { $colour = 'green'; }
-                                if ( $log->status === 'blocked' )     { $colour = '#d63638'; } // red
-                                if ( $log->status === 'rolled_back' ) { $colour = '#dba617'; } // amber
+                                $colour = '#666';
+                                if ( $log->status === 'success' )        { $colour = 'green'; }
+                                if ( $log->status === 'blocked' )        { $colour = '#d63638'; }
+                                if ( $log->status === 'rolled_back' )    { $colour = '#dba617'; }
+                                if ( $log->status === 'restore_failed' ) { $colour = '#d63638'; }
                                 ?>
                                 <strong style="color:<?php echo esc_attr( $colour ); ?>">
                                     <?php echo esc_html( $log->status ); ?>
@@ -175,10 +188,9 @@ public function render_page() {
                     </tbody>
                 </table>
 
-            <?php endif; 
+            <?php endif; ?>
 
-
-
-
-}
+        </div>
+        <?php
+    }
 }

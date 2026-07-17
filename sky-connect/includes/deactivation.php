@@ -18,6 +18,10 @@ class Sky_Connect_Deactivator {
         /* ------------------------------ stop the daily cleanup schedule ---------*/
         wp_clear_scheduled_hook( 'sky_connect_daily' );
         
+
+        /* ------------------------------ remove the emergency mu-plugin ---------*/
+        require_once SKY_CONNECT_DIR . 'mu-installer.php';
+        Sky_Connect_MU_Installer::remove();
         /* ------------------------------ clean up rewrite rules on deactivate ---------*/
 flush_rewrite_rules();
     }

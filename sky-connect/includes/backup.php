@@ -47,6 +47,7 @@ class Sky_Connect_Backup {
     }
 
     /* ------------------------------ make a backup before editing ---------*/
+   /* ------------------------------ make a backup before editing (and verify it) ---------*/
     public static function create( $full_path, $relative_path ) {
 
         // nothing to back up if the file does not exist yet
@@ -56,8 +57,6 @@ class Sky_Connect_Backup {
 
         $dir  = self::backup_dir();
         $name = self::safe_name( $relative_path );
-
-        // add the date+time so every save makes its own restore point
         $stamp = gmdate( 'Y-m-d-H-i-s' );
 
         $backup_path = $dir . '/' . $name . '.' . $stamp . '.bak';
@@ -65,10 +64,27 @@ class Sky_Connect_Backup {
         // copy the current file into the backup folder
         $done = copy( $full_path, $backup_path );
 
-        return $done ? $backup_path : false;
+        if ( ! $done ) {
+            return false;
+        }
+
+        /* ------------------------------ VERIFY the backup is a real, exact copy ---------*/
+        // if the copy is truncated or corrupted, restoring it later would fail or
+        // damage the file. we compare both files byte-for-byte before trusting it.
+        $original_hash = md5_file( $full_path );
+        $backup_hash   = md5_file( $backup_path );
+
+        if ( $original_hash === false || $backup_hash === false || $original_hash !== $backup_hash ) {
+            // backup is bad — delete it and report failure so the save is cancelled
+            @unlink( $backup_path );
+            return false;
+        }
+
+        /* ------------------------------ backup is good ---------*/
+        return $backup_path;
     }
 
-    /* ------------------------------ put the newest backup back ---------*/
+    /* ------------------------------ put the newest backup back (and verify it) ---------*/
     public static function restore( $full_path, $relative_path ) {
 
         $dir  = self::backup_dir();
@@ -86,7 +102,23 @@ class Sky_Connect_Backup {
         $newest = end( $matches );
 
         // copy the backup back over the live file
-        return copy( $newest, $full_path );
+        $done = copy( $newest, $full_path );
+
+        if ( ! $done ) {
+            return false;
+        }
+
+        /* ------------------------------ VERIFY the restore is an exact copy ---------*/
+        // copy() can report success but still leave a truncated file (disk full).
+        // compare fingerprints — only trust the restore if they match exactly.
+        $backup_hash   = md5_file( $newest );
+        $restored_hash = md5_file( $full_path );
+
+        if ( $backup_hash === false || $restored_hash === false || $backup_hash !== $restored_hash ) {
+            return false; // restore did not fully succeed
+        }
+
+        return true;
     }
 
     /* ------------------------------ delete backups older than 30 days ---------*/
