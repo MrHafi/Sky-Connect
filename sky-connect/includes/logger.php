@@ -48,6 +48,7 @@ class Sky_Connect_Logger {
     /* ------------------------------ write one line to the log ---------*/
     public static function add( $tool, $file_path, $status, $message = '' ) {
 
+        self::ensure_table();  
         global $wpdb;
 
         $wpdb->insert(
@@ -65,6 +66,7 @@ class Sky_Connect_Logger {
     /* ------------------------------ read the newest logs (for the admin page) ---------*/
     public static function get_recent( $limit = 50 ) {
 
+    self::ensure_table();
         global $wpdb;
         $table = self::table_name();
 
@@ -86,5 +88,24 @@ class Sky_Connect_Logger {
         $wpdb->query(
             "DELETE FROM $table WHERE created_at < DATE_SUB( NOW(), INTERVAL 30 DAY )"
         );
+    }
+
+
+
+    /* ------------------------------ make sure the table exists ---------*/
+    private static function ensure_table() {
+
+        global $wpdb;
+        $table = self::table_name();
+
+        // check if our table is present
+        $found = $wpdb->get_var(
+            $wpdb->prepare( 'SHOW TABLES LIKE %s', $table )
+        );
+
+        // not there — create it now (covers plugin-updated-while-active case)
+        if ( $found !== $table ) {
+            self::create_table();
+        }
     }
 }

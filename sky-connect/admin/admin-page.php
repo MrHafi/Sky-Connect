@@ -77,6 +77,17 @@ class Sky_Connect_Admin {
             wp_redirect( admin_url( 'admin.php?page=sky-connect' ) );
             exit;
         }
+
+
+        /* ------------------------------ regenerate emergency key ---------*/
+        if (
+            isset( $_POST['sky_connect_regen_emergency'] ) &&
+            check_admin_referer( 'sky_connect_regen_emergency' )
+        ) {
+            update_option( 'sky_connect_emergency_key', bin2hex( random_bytes( 16 ) ) );
+            wp_redirect( admin_url( 'admin.php?page=sky-connect' ) );
+            exit;
+        }
     }
         
 
@@ -139,6 +150,14 @@ class Sky_Connect_Admin {
             <code style="font-size:12px; word-break:break-all;"><?php echo esc_html( $base_url ); ?></code>
             <p style="color:#d63638;"><small>Keep this private — anyone with this URL can restore your files.</small></p>
 
+            <p style="color:#d63638;"><small>Keep this private. The key changes automatically after each use.</small></p>
+
+            <form method="post">
+                <?php wp_nonce_field( 'sky_connect_regen_emergency' ); ?>
+                <button type="submit" name="sky_connect_regen_emergency" class="button">
+                    Regenerate Emergency Key
+                </button>
+            </form>
             <hr>
 
             <?php /* ------------------------------ activity log section ---------*/ ?>

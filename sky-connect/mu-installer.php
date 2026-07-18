@@ -95,10 +95,43 @@ add_action( 'muplugins_loaded', function () {
     $newest = end( $matches );
 
     // the live file to overwrite
+  // the live file to overwrite
     $live = WP_PLUGIN_DIR . '/' . ltrim( $file, '/' );
 
-    if ( copy( $newest, $live ) ) {
-        exit( 'Restored newest backup of ' . htmlspecialchars( $file ) . '. Check your site now.' );
+    // JAIL CHECK — the target MUST be inside the plugins folder.
+    // this stops ../ tricks like file=../../wp-config.php from writing
+    // outside the plugins folder. we resolve the real path of the parent
+    // folder (the file itself may not exist) and confirm it sits inside.
+    $plugins_base = realpath( WP_PLUGIN_DIR );
+    $target_dir   = realpath( dirname( $live ) );
+
+    if (
+        $plugins_base === false ||
+        $target_dir === false ||
+        strpos( rtrim( $target_dir, '/' ) . '/', rtrim( $plugins_base, '/' ) . '/' ) !== 0
+    ) {
+        exit( 'Blocked — that path is outside the plugins folder.' );
+    }
+
+   if ( copy( $newest, $live ) ) {
+
+        /* ------------------------------ rotate the key — used key is now dead ---------*/
+        // the key just travelled in a URL (logged) and maybe an email. burn it.
+        // generate a fresh one so a leaked key can never be replayed.
+        $new_key = bin2hex( random_bytes( 16 ) );
+        update_option( 'sky_connect_emergency_key', $new_key );
+
+        // hand the user the NEW links so a multi-file emergency isn't blocked
+        $home     = home_url( '/' );
+        $list_url = $home . '?sky_restore=' . $new_key;
+
+        echo '<h2>✅ Restored</h2>';
+        echo '<p>Restored newest backup of <code>' . htmlspecialchars( $file ) . '</code>. Check your site now.</p>';
+        echo '<hr>';
+        echo '<p><strong>Your key has changed for security.</strong> Use this new link for any further restores:</p>';
+        echo '<p><a href="' . htmlspecialchars( $list_url ) . '">' . htmlspecialchars( $list_url ) . '</a></p>';
+        echo '<p><small>Add <code>&file=plugin/file.php</code> to restore another file.</small></p>';
+        exit;
     }
 
     exit( 'Restore failed — could not write the file.' );

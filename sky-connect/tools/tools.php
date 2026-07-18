@@ -16,6 +16,8 @@ if ( ! defined( 'ABSPATH' ) ) {
 /* ------------------------------ tools class ---------*/
 class Sky_Connect_Tools {
 
+
+ const MAX_FILE_SIZE = 2097152; // 2 * 1024 * 1024 file size limit for read/wreite
     /* ------------------------------ tool 1: list all plugin folders ---------*/
     public static function list_plugins() {
 
@@ -70,11 +72,17 @@ class Sky_Connect_Tools {
     /* ------------------------------ tool 3: read a file ---------*/
     public static function read_file( $path ) {
 
+
         // jail check
         $safe = Sky_Connect_Jail::safe_path( $path );
 
         if ( $safe === false || ! is_file( $safe ) ) {
             return array( 'error' => 'File not found or not allowed' );
+        }
+
+        /* ------------------------------ refuse to read a file that's too big ---------*/
+        if ( filesize( $safe ) > self::MAX_FILE_SIZE ) {
+            return array( 'error' => 'File is too large to read (over 2MB)' );
         }
 
         require_once SKY_CONNECT_DIR . 'includes/logger.php';
@@ -97,7 +105,7 @@ class Sky_Connect_Tools {
 
        if ( $safe === false || ! is_file( $safe ) ) {
             require_once SKY_CONNECT_DIR . 'includes/logger.php';
-            Sky_Connect_Logger::add( 'read_file', $path, 'blocked', 'File not found or outside jail' );
+            Sky_Connect_Logger::add( 'write_file', $path, 'blocked', 'File not found or outside jail' );
             return array( 'error' => 'File not found or not allowed' );
         }
 
@@ -107,6 +115,13 @@ class Sky_Connect_Tools {
         if ( trim( $content ) === '' ) {
             return array( 'error' => 'Refused — empty content would wipe the file' );
         }
+
+
+        /* ------------------------------ refuse to write content that's too big ---------*/
+        if ( strlen( $content ) > self::MAX_FILE_SIZE ) {
+            return array( 'error' => 'Content is too large to write (over 2MB)' );
+        }
+
 
         /* ------------------------------ STEP 2: never let Claude edit its own plugin ---------*/
         if ( ! Sky_Connect_Jail::is_writable_path( $safe ) ) {
