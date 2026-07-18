@@ -105,12 +105,20 @@ add_action( 'muplugins_loaded', function () {
     $plugins_base = realpath( WP_PLUGIN_DIR );
     $target_dir   = realpath( dirname( $live ) );
 
-    if (
+   if (
         $plugins_base === false ||
         $target_dir === false ||
         strpos( rtrim( $target_dir, '/' ) . '/', rtrim( $plugins_base, '/' ) . '/' ) !== 0
     ) {
         exit( 'Blocked — that path is outside the plugins folder.' );
+    }
+
+    // SELF-PROTECTION — never let the emergency restore overwrite Sky Connect
+    // itself. Restoring a bad copy of our own plugin could break the very tool
+    // needed to recover, so we refuse any path inside the sky-connect folder.
+    $sky_folder = rtrim( WP_PLUGIN_DIR, '/' ) . '/sky-connect/';
+    if ( strpos( rtrim( $target_dir, '/' ) . '/', $sky_folder ) === 0 ) {
+        exit( 'Blocked — cannot restore the Sky Connect plugin itself.' );
     }
 
    if ( copy( $newest, $live ) ) {

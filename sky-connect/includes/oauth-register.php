@@ -56,8 +56,17 @@ class Sky_Connect_OAuth_Register {
         /* ------------------------------ create a fresh client_id ---------*/
         $client_id = 'sky-client-' . bin2hex( random_bytes( 16 ) );
 
-        /* ------------------------------ store this client's details ---------*/
+      /* ------------------------------ store this client's details ---------*/
         $clients = get_option( 'sky_connect_dcr_clients', array() );
+
+        // drop any client older than 30 days so this list never grows forever
+        $cutoff = time() - ( 30 * DAY_IN_SECONDS );
+        foreach ( $clients as $cid => $data ) {
+            if ( isset( $data['created'] ) && $data['created'] < $cutoff ) {
+                unset( $clients[ $cid ] );
+            }
+        }
+
         $clients[ $client_id ] = array(
             'client_name'   => $client_name,
             'redirect_uris' => array_map( 'esc_url_raw', $redirect_uris ),

@@ -71,10 +71,22 @@ class Sky_Connect_OAuth_Token {
             );
         }
 
-        /* ------------------------------ verify redirect_uri matches ---------*/
+       /* ------------------------------ verify redirect_uri matches ---------*/
         if ( $redirect_uri !== $stored['redirect_uri'] ) {
             return new WP_REST_Response(
                 array( 'error' => 'invalid_grant' ),
+                400
+            );
+        }
+
+        /* ------------------------------ verify resource (audience) matches ---------*/
+        // the resource was saved when the auth code was created. if the request
+        // now asks for a different resource, reject it — the token must only be
+        // valid for the server it was approved for.
+        $req_resource = esc_url_raw( $request->get_param( 'resource' ) );
+        if ( ! empty( $stored['resource'] ) && $req_resource !== $stored['resource'] ) {
+            return new WP_REST_Response(
+                array( 'error' => 'invalid_target' ),
                 400
             );
         }

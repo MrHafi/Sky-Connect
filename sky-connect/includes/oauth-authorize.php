@@ -170,7 +170,7 @@ class Sky_Connect_OAuth_Authorize
 
 ?>
 
-        ?>
+        
         <div class="wrap">
             <h1>Sky Connect — Allow Access</h1>
             <div style="max-width:500px; border:1px solid #ddd; border-radius:8px; padding:30px; margin-top:20px;">
