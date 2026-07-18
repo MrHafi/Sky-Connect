@@ -240,4 +240,5 @@ class Sky_Connect_Tools {
 
         return implode( "\n", $last );
     }
+    
 }

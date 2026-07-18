@@ -28,7 +28,7 @@ class Sky_Connect_Rest {
             array(
                 'methods'             => 'POST',
                 'callback'            => array( $this, 'handle_request' ),
-                'permission_callback' => '__return_true', // real auth added in Step 5
+                'permission_callback' => '__return_true',  // MCP needs the request to reach us so we can send the 401 discovery signal; real auth runs inside handle_request() via Sky_Connect_Auth::check()
             )
         );
     }
@@ -122,9 +122,15 @@ class Sky_Connect_Rest {
                 $content = isset( $args['content'] ) ? $args['content'] : '';
                 $result  = Sky_Connect_Tools::write_file( $path, $content );
 
-            }  elseif ( $tool_name === 'read_error_log' ) {
+           } elseif ( $tool_name === 'read_error_log' ) {
                 $result = Sky_Connect_Tools::read_error_log();
-              }  else {
+
+            } elseif ( $tool_name === 'multi-file-write' ) {
+                require_once SKY_CONNECT_DIR . 'tools/multi-file-write.php';
+                $files  = isset( $args['files'] ) ? $args['files'] : array();
+                $result = Sky_Connect_Multi_File::write_multiple_files( $files );
+
+            } else {
                 $result = array( 'error' => 'Unknown tool' );
             }
 
@@ -237,6 +243,35 @@ class Sky_Connect_Rest {
                             ),
                         ),
                         
+                        /* ------------------------------ tool 6: write several files at once (all-or-nothing) ---------*/
+                        array(
+                            'name'        => 'multi-file-write',
+                            'description' => 'Write several plugin files together as one atomic change. Use this when edits span multiple files that must work together (e.g. renaming a function used across files). If any file fails or the site breaks, ALL files roll back — no half-applied changes. For a single file, use write_file instead.',
+                            'inputSchema' => array(
+                                'type'       => 'object',
+                                'properties' => array(
+                                    'files' => array(
+                                        'type'        => 'array',
+                                        'description' => 'List of files to write together',
+                                        'items'       => array(
+                                            'type'       => 'object',
+                                            'properties' => array(
+                                                'path'    => array(
+                                                    'type'        => 'string',
+                                                    'description' => 'File path relative to plugins folder',
+                                                ),
+                                                'content' => array(
+                                                    'type'        => 'string',
+                                                    'description' => 'New file content',
+                                                ),
+                                            ),
+                                            'required'   => array( 'path', 'content' ),
+                                        ),
+                                    ),
+                                ),
+                                'required'   => array( 'files' ),
+                            ),
+                        ),
 
                     ),
                 ),
