@@ -4,7 +4,7 @@
  * Description: Turns this WordPress site into an MCP server so Claude can read and safely edit plugin files (locked to the plugins folder).
  * Version: 1.0.0
  * Author: Hafi
- * Site: https://devbuggs.com
+ * Site: https://devbuggs.io
  */
 
 if ( ! defined( 'ABSPATH' ) ) {
